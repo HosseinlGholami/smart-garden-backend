@@ -1,0 +1,13 @@
+/* src/index.css */
+
+body {
+  font-family: Arial, sans-serif;
+  margin: 0;
+  padding: 0;
+}
+
+.app {
+  text-align: center;
+}
+
+/* Add any other global styles you want to apply */

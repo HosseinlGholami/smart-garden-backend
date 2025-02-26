@@ -1,0 +1,1 @@
+FROM registry-git.digikala.com/digi-automation/server-codes/ci-cd-boilerplate/base-app:2.0.0

@@ -1,0 +1,29 @@
+# docker-compose-application.yml
+
+services:
+  app:
+    build: ./django_image/
+    container_name: django_app-trf
+    volumes:
+      - ./app:/src
+    ports:
+      - "5002:5002"
+      #cd front && npm run build && cd .. && python manage.py migrate &&
+    command: sh -c ' python manage.py runserver 0.0.0.0:5002'
+    extra_hosts:
+      - "fc.digikala.com: 172.16.119.2"
+    env_file:
+      - .env
+
+  celery:
+    build: ./django_image/
+    container_name: celery-trf
+    volumes:
+      - ./app:/src
+    ports:
+      - 6666:6666
+    command: sh -c "echo celery started ... ;celery -A core worker -l INFO --autoscale=4,8  -B  & celery -A core flower --port=6666 --url_prefix=flower > /dev/null 2>&1"
+    extra_hosts:
+      - "fc.digikala.com: 172.16.119.2"
+    env_file:
+      - .env
