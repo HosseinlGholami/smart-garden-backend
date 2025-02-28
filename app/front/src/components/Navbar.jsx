@@ -10,19 +10,26 @@ const CustomNavbar = ({ userData, navItems }) => {
     window.location.reload();
   };
 
+  const accessLevelName = (accessLevel) => {
+    switch (accessLevel) {
+      case 0:
+        return "Viewer";
+      case 1:
+        return "Operator";
+      case 2:
+        return "Developer";
+      case 3:
+        return "Maintainer";
+      default:
+        return "Unknown";
+    }
+  };
+
   const renderUserDropdown = () => {
-    console.log(userData)
     return (
       <Dropdown.Menu>
-        <Dropdown.Item>
-          <h6>first name:</h6> {userData.first_name}
-        </Dropdown.Item>
-        <Dropdown.Item>
-          <h6>last name:</h6> {userData.last_name}
-        </Dropdown.Item>
-        <Dropdown.Item>
-          <h6>role:</h6> {userData.user_role.name}
-        </Dropdown.Item>
+        <Dropdown.Item>{userData.name}</Dropdown.Item>
+        <Dropdown.Item>{accessLevelName(userData.access_level)}</Dropdown.Item>
         <Dropdown.Divider />
         <Dropdown.Item onClick={handleLogout}>Logout</Dropdown.Item>
       </Dropdown.Menu>
@@ -37,7 +44,7 @@ const CustomNavbar = ({ userData, navItems }) => {
       <Nav.Item className="ml-auto">
         <Dropdown>
           <Dropdown.Toggle variant="light" id="dropdown-basic">
-            {userData ? userData.username : "User"}
+            {userData ? userData.preferred_username : "User"}
           </Dropdown.Toggle>
           {renderUserDropdown()}
         </Dropdown>

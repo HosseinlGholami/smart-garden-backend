@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Button, Col, Container, Form, FormGroup, Input, Label, Row } from 'reactstrap';
-import User_apiUrl from "../components/apiConfig";
+import User_apiUrl from "../src/components/apiConfig";
 
 const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
   const [options, setOptions] = useState([]);
@@ -21,7 +21,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
         });
 
@@ -49,7 +49,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
         });
 
@@ -72,7 +72,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "GET",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
         });
 
@@ -127,7 +127,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
           body: JSON.stringify({
             "sorter_pigeon": selectedSorterOption,
@@ -169,7 +169,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
           body: JSON.stringify({
             "sorter_pigeon": selectedSorterOption,
@@ -210,7 +210,7 @@ const ConfigComponent = ({ toggleModal, togglePageFreeze }) => {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            Authorization: `JWT ${access_token}`,
+            Authorization: `Bearer ${access_token}`,
           },
           body: JSON.stringify({
             "sorter_pigeon": selectedSorterOption,
