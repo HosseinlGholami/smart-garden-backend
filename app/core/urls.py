@@ -44,7 +44,7 @@ urlpatterns = [
     path('trf/api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
     # auth
-    path('trf/auth/', include('core.custom_djoser_urls')),
+    # path('trf/auth/', include('core.custom_djoser_urls')),
 
     re_path(r'^trf/.*$', TemplateView.as_view(template_name='index.html')),
 ]

@@ -5,21 +5,35 @@ from .util import *
 from djoser.serializers import UserSerializer
 
 
-class CustomUserSerializer(serializers.ModelSerializer):
-    user_role = serializers.PrimaryKeyRelatedField(
-        queryset=UserRole.objects.all()
-    )  # Allows setting user_role by ID instead of a nested object
-
-    class Meta:
-        model = CustomUser
-        fields = ["username", "first_name", "last_name", "user_role", "email"]
-
-
-
 class TRFParameterSerializer(serializers.ModelSerializer):
+    modified_name = serializers.SerializerMethodField()
+
     class Meta:
         model = TRFParam
-        fields = ["param_name", "param_id"]
+        fields = ["param_name", "param_id", "modified_name"]
+
+    def get_modified_name(self, obj):
+        request = self.context.get("request")
+        device_id = request.query_params.get("device_id") if request else None
+
+        param_name = obj.param_name
+        param_id = obj.param_id
+
+        if "PARAMS_INPUT_NUM" in param_name:
+            temp_param = param_name.split("_")[0:4]
+            related_param = "_".join(temp_param)
+
+            # Filter SensorPlace based on device_id if provided
+            sensor_places_filter = SensorPlace.objects.filter(pin_num__param_name=related_param)
+            if device_id:
+                sensor_places_filter = sensor_places_filter.filter(device_id=device_id)
+
+            if sensor_places_filter.exists():
+                for sensor in sensor_places_filter:
+                    remain = param_name.split(related_param)[-1]
+                    return f"{sensor.section}{remain}" if remain else f"{sensor.section}_VALUE"
+
+        return param_name
 
 class SensorPlaceSerializer(serializers.ModelSerializer):
     class Meta:

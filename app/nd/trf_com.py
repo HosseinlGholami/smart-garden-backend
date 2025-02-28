@@ -20,7 +20,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_TRF_UUID",
         "default_value": 200,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_RELAY_1_OUTPUT = {
@@ -28,7 +28,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_RELAY_1_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_RELAY_2_OUTPUT = {
@@ -36,7 +36,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_RELAY_2_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_RELAY_3_OUTPUT = {
@@ -44,7 +44,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_RELAY_3_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_MOSFET_1_OUTPUT = {
@@ -52,7 +52,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_MOSFET_1_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_MOSFET_2_OUTPUT = {
@@ -60,7 +60,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_MOSFET_2_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_BLINK_OUTPUT = {
@@ -68,7 +68,7 @@ class TRFParameterId(Enum):
         "param_name": "PARAMS_BLINK_OUTPUT",
         "default_value": 0,
         "is_advance": False,
-        "is_settable": False,
+        "is_settable": True,
         "detail": ""
     }
     PARAMS_INPUT_NUM_1 = {

@@ -9,20 +9,16 @@ from . import models
 @admin.register(models.CustomUser)
 class UserAdmin(BaseUserAdmin):
     list_display = ['username',
-                    'email', 'first_name', 'last_name',  'user_role']
-    list_editable = ['email', 'user_role']
+                    'email', 'first_name', 'last_name',  'access_level']
+    list_editable = ['email']
 
     add_fieldsets = (
         (None, {
             'classes': ('wide',),
             'fields': ('username', 'password1', 'password2', 'email', 'first_name', 'last_name',
-                       'user_role')
+                       'access_level')
         }),
     )
-
-@admin.register(models.UserRole)
-class UserRoleAdmin(admin.ModelAdmin):
-    list_display = ['name', 'home_access', 'config_access', 'advance_control']
 
 
 @admin.register(models.TRFProject)

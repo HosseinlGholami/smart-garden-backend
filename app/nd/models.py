@@ -2,21 +2,15 @@
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 from enum import Enum
+from core.enums import AccessLevels
 
 
-class UserRole(models.Model):
-    name = models.CharField(max_length=255, unique=True)
-    home_access = models.BooleanField(default=True, null=False)
-    config_access = models.BooleanField(default=True, null=False)
-    advance_control = models.BooleanField(default=True)  # Fixed typo
-
-    def __str__(self) -> str:
-        return self.name
 
 class CustomUser(AbstractUser):
     email = models.EmailField(unique=True)
-    user_role = models.ForeignKey(
-        UserRole, on_delete=models.PROTECT, null=True, blank=True)  # Added blank=True for optional values
+    access_level = models.IntegerField(
+        choices=AccessLevels.choices, default=AccessLevels.VIEWER
+    )
 
 
 class TRFProject(models.Model):

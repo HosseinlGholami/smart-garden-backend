@@ -99,53 +99,41 @@ CSRF_TRUSTED_ORIGINS = ["https://robotics.digikala.com", "http://localhost"]
 REST_FRAMEWORK = {
     'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'rest_framework_simplejwt.authentication.JWTAuthentication',
+        'core.authentication.SSOAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
 
 }
 
-DJOSER = {
-    'SERIALIZERS': {
-        'user': 'nd.serializers.CustomUserSerializer',
-        'current_user': 'nd.serializers.CustomUserSerializer',
-    },
-    'DISABLE_ENDPOINTS': [
-        'users', 'users/confirm', 'users/resend_activation',
-        'users/set_password', 'users/reset_password', 'users/set_username',
-        'users/reset_username', 'users/reset_username_confirm', 'token/login', 'token/logout'
-    ],
-}
 
-SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(days=1),
-    'AUTH_HEADER_TYPES': ('JWT',),
-}
-REST_USE_JWT = True
+
 
 AUTH_USER_MODEL = 'nd.CustomUser'
 # ===================================================
 
 SPECTACULAR_SETTINGS = {
-    'TITLE': 'ND API',
-    'DESCRIPTION': 'API documentations',
-    'VERSION': '1.0.0',
-    'SERVE_INCLUDE_SCHEMA': False,
-    'EXCLUDE_PATHS': [
-        '/auth/users/',
-        '/auth/users/confirm/',
-        '/auth/users/resend_activation/',
-        '/auth/users/set_password/',
-        '/auth/users/reset_password/',
-        '/auth/users/set_username/',
-        '/auth/users/reset_username/',
-        '/auth/users/reset_username_confirm/',
-        '/auth/token/login/',
-        '/auth/token/logout/',
-        '/auth/users/activation/',
-        
+    "TITLE": "Traffic Management API Documentation",
+    "DESCRIPTION": "API for Traffic Management",
+    "VERSION": "1.1.0",
+    "SWAGGER_UI_SETTINGS": {
+        "persistAuthorization": True,  # Keeps token input across requests
+        "defaultModelsExpandDepth": -1,  # Hides database models from the UI
+    },
+    "SECURITY_DEFINITIONS": {
+        "jwtAuth": {
+            "type": "http",
+            "scheme": "bearer",
+            "bearerFormat": "JWT",
+        }
+    },
+    "SECURITY": [{"jwtAuth": []}],
+    "SERVE_AUTHENTICATION": [
+        "rest_framework_simplejwt.authentication.JWTAuthentication",
+        "core.authentication.SSOAuthentication",
     ],
+    "SCHEMA_PATH_PREFIX": "/trf/",  # Only document your API paths
 }
+
 # ====================================
 
 ROOT_URLCONF = 'core.urls'
