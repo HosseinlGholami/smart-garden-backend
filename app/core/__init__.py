@@ -11,4 +11,4 @@ import os
 # purge_rabbitmq_queue(username='celery', password='celery', rabbitmq_address=os.environ['LOCAL_IP'],
 #                      virtual_host='wvh', queue_name='celery')
 
-__all__ = ('celery_app')
+__all__ = ('celery_app',)

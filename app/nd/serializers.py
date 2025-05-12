@@ -2,8 +2,11 @@ from rest_framework import serializers
 from .models import *
 from .util import *
 
-from djoser.serializers import UserSerializer
+from djoser.serializers import UserSerializer as BaseUserSerializer
+from djoser.serializers import UserCreateSerializer as BaseUserCreateSerializer
+from django.contrib.auth import get_user_model
 
+User = get_user_model()
 
 class TRFParameterSerializer(serializers.ModelSerializer):
     modified_name = serializers.SerializerMethodField()
@@ -52,3 +55,14 @@ class DeviceOtaSerializer(serializers.Serializer):
         if not SensorPlace.objects.filter(device_id=value).exists():
             raise serializers.ValidationError("Device ID does not exist.")
         return value
+
+class UserCreateSerializer(BaseUserCreateSerializer):
+    class Meta(BaseUserCreateSerializer.Meta):
+        model = User
+        fields = ('id', 'email', 'username', 'password', 'first_name', 'last_name')
+
+class UserSerializer(BaseUserSerializer):
+    class Meta(BaseUserSerializer.Meta):
+        model = User
+        fields = ('id', 'email', 'username', 'first_name', 'last_name', 'access_level')
+        read_only_fields = ('access_level',)

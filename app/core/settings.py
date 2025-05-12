@@ -36,10 +36,10 @@ STATIC_URL = 'trf/static/'
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-tvn+v@r%^nzm@be-24u4xbv4cge-ufd@swj@g(u71htat=+1_y'
+SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
-ALLOWED_HOSTS = ['*']
+DEBUG = os.environ.get('DEBUG', '1') == '1'
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').split()
 
 # Application definition
 INSTALLED_APPS = [
@@ -52,6 +52,7 @@ INSTALLED_APPS = [
     'drf_spectacular',
     # for authentication
     "djoser",
+    'rest_framework_simplejwt',
     # django default
     'django.contrib.admin',
     'django.contrib.contenttypes',
@@ -63,9 +64,12 @@ INSTALLED_APPS = [
     'corsheaders',
     # for handling get data from celery worker
     'django_celery_results',
+    'django_celery_beat',
+    'tasks.apps.TasksConfig',
 ]
 
 MIDDLEWARE = [
+    'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
@@ -73,23 +77,15 @@ MIDDLEWARE = [
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
-    'django.middleware.common.CommonMiddleware',
 ]
 
 # ===================================================
 # ===========related to load react local=============
 # ===================================================
-CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",
-    f"http://{os.environ['LOCAL_IP']}:5001",  
-    "https://robotics.digikala.com"
-]
-
-CORS_ALLOW_ALL_ORIGINS = True
+CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:80,http://127.0.0.1:80').split(',')
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ["https://robotics.digikala.com", "http://localhost"]
+CSRF_TRUSTED_ORIGINS = CORS_ALLOWED_ORIGINS
 # ===================================================
 
 
@@ -99,22 +95,60 @@ CSRF_TRUSTED_ORIGINS = ["https://robotics.digikala.com", "http://localhost"]
 REST_FRAMEWORK = {
     'COERCE_DECIMAL_TO_STRING': False,
     'DEFAULT_AUTHENTICATION_CLASSES': (
-        'core.authentication.SSOAuthentication',
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_SCHEMA_CLASS': 'drf_spectacular.openapi.AutoSchema',
-
 }
 
+# Djoser settings
+DJOSER = {
+    'LOGIN_FIELD': 'email',
+    'USER_CREATE_PASSWORD_RETYPE': True,
+    'USERNAME_CHANGED_EMAIL_CONFIRMATION': True,
+    'PASSWORD_CHANGED_EMAIL_CONFIRMATION': True,
+    'SEND_CONFIRMATION_EMAIL': True,
+    'SET_USERNAME_RETYPE': True,
+    'SET_PASSWORD_RETYPE': True,
+    'PASSWORD_RESET_CONFIRM_URL': 'password/reset/confirm/{uid}/{token}',
+    'USERNAME_RESET_CONFIRM_URL': 'username/reset/confirm/{uid}/{token}',
+    'ACTIVATION_URL': 'activate/{uid}/{token}',
+    'SEND_ACTIVATION_EMAIL': True,
+    'SERIALIZERS': {
+        'user_create': 'nd.serializers.UserCreateSerializer',
+        'user': 'nd.serializers.UserSerializer',
+        'current_user': 'nd.serializers.UserSerializer',
+        'user_delete': 'djoser.serializers.UserDeleteSerializer',
+    },
+}
 
+# JWT settings
+SIMPLE_JWT = {
+    'AUTH_HEADER_TYPES': ('JWT',),
+    'ACCESS_TOKEN_LIFETIME': timedelta(days=1),
+    'REFRESH_TOKEN_LIFETIME': timedelta(days=7),
+    'ROTATE_REFRESH_TOKENS': True,
+    'BLACKLIST_AFTER_ROTATION': True,
+    'UPDATE_LAST_LOGIN': True,
+    'USER_ID_FIELD': 'id',
+    'USER_ID_CLAIM': 'user_id',
+}
 
+# Email settings (required for password reset and email verification)
+EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_HOST = os.environ.get('EMAIL_HOST', 'smtp.gmail.com')
+EMAIL_PORT = int(os.environ.get('EMAIL_PORT', 587))
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER', '')
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
+EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
+DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@smartgarden.com')
 
 AUTH_USER_MODEL = 'nd.CustomUser'
 # ===================================================
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Traffic Management API Documentation",
-    "DESCRIPTION": "API for Traffic Management",
-    "VERSION": "1.1.0",
+    "TITLE": "Smart Garden API Documentation",
+    "DESCRIPTION": "API for Smart Garden Management",
+    "VERSION": "1.0.0",
     "SWAGGER_UI_SETTINGS": {
         "persistAuthorization": True,  # Keeps token input across requests
         "defaultModelsExpandDepth": -1,  # Hides database models from the UI
@@ -140,7 +174,7 @@ ROOT_URLCONF = 'core.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS':  [FRONTEND_DIR, STATICS_DIR],
+        'DIRS': [],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -159,12 +193,12 @@ ASGI_APPLICATION = "core.asgi.application"
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': 'trf_app_db',
-        'USER': 'root',
-        'PASSWORD': 'root',
-        'HOST': os.environ['LOCAL_IP'],
-        'PORT': '3306',
+        'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.mysql'),
+        'NAME': os.environ.get('DB_NAME', 'smart_garden'),
+        'USER': os.environ.get('DB_USER', 'root'),
+        'PASSWORD': os.environ.get('DB_PASSWORD', 'root'),
+        'HOST': os.environ.get('DB_HOST', 'db'),
+        'PORT': os.environ.get('DB_PORT', '3306'),
     }
 }
 
@@ -173,18 +207,18 @@ DATABASES = {
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators
 
 AUTH_PASSWORD_VALIDATORS = [
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
-    # },
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
-    # },
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
-    # },
-    # {
-    #     'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
-    # },
+    {
+        'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.MinimumLengthValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.CommonPasswordValidator',
+    },
+    {
+        'NAME': 'django.contrib.auth.password_validation.NumericPasswordValidator',
+    },
 ]
 
 
@@ -219,30 +253,79 @@ LOGGING = {
     },
     'root': {
         'handlers': ['console'],
-        'level': 'DEBUG',  # You can set this to 'DEBUG', 'INFO', 'WARNING', 'ERROR', or 'CRITICAL'
+        'level': os.environ.get('DJANGO_LOG_LEVEL', 'INFO'),
     },
 }
 
 # for handling channels
 CHANNEL_LAYERS = {
     "default": {
-        "BACKEND": "channels_redis.core.RedisChannelLayer",
+        "BACKEND": os.environ.get('CHANNEL_LAYERS_BACKEND', 'channels_redis.core.RedisChannelLayer'),
         "CONFIG": {
-            "hosts": [(os.environ['LOCAL_IP'], 6379)],
+            "hosts": [(os.environ.get('CHANNEL_LAYERS_HOST', 'redis'),
+                      int(os.environ.get('CHANNEL_LAYERS_PORT', 6379)))],
         },
     },
 }
 
+# Celery Configuration
+CELERY_BROKER_URL = os.environ.get('CELERY_BROKER_URL', 'amqp://guest:guest@broker:5672//')
+CELERY_RESULT_BACKEND = os.environ.get('CELERY_RESULT_BACKEND', 'redis://redis:6379/0')
+
 # Celery Configuration Options
-CELERY_ACCEPT_CONTENT = ['application/json']
+CELERY_TIMEZONE = TIME_ZONE
+CELERY_TASK_TRACK_STARTED = True
+CELERY_TASK_TIME_LIMIT = 60 * 60 * 24  # 24 hours
+CELERY_TASK_SOFT_TIME_LIMIT = 60 * 30  # 30 minutes
+
+# Celery Beat Settings
+CELERY_BEAT_SCHEDULER = 'django_celery_beat.schedulers:DatabaseScheduler'
+
+# Task settings
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Tehran'
-CELERY_TASK_TRACK_STARTED = True
-CELERY_TASK_TIME_LIMIT = 60 * 60 * 24 * 7
-CELERY_BROKER_URL = f"amqp://celery:celery@{os.environ['LOCAL_IP']}:5672/wvh"
-# CELERY_RESULT_BACKEND = 'rpc://'
+CELERY_ACCEPT_CONTENT = ['json']
+CELERY_TASK_REJECT_ON_WORKER_LOST = True
+CELERY_TASK_ACKS_LATE = True
 
+# Queue settings
+CELERY_TASK_DEFAULT_QUEUE = 'default'
+CELERY_TASK_QUEUES = {
+    'default': {
+        'exchange': 'default',
+        'routing_key': 'default',
+    },
+    'high_priority': {
+        'exchange': 'high_priority',
+        'routing_key': 'high_priority',
+    },
+    'low_priority': {
+        'exchange': 'low_priority',
+        'routing_key': 'low_priority',
+    },
+}
+
+# RabbitMQ Settings
+RABBITMQ_HOST = os.environ.get('RABBITMQ_HOST', 'broker')
+RABBITMQ_PORT = int(os.environ.get('RABBITMQ_PORT', 5672))
+RABBITMQ_USER = os.environ.get('RABBITMQ_USER', 'guest')
+RABBITMQ_PASS = os.environ.get('RABBITMQ_PASS', 'guest')
+RABBITMQ_VHOST = os.environ.get('RABBITMQ_VHOST', '/')
+
+# Construct Broker URL
+CELERY_BROKER_URL = f'amqp://{RABBITMQ_USER}:{RABBITMQ_PASS}@{RABBITMQ_HOST}:{RABBITMQ_PORT}/{RABBITMQ_VHOST}'
+
+# Result Backend Settings
 CELERY_RESULT_BACKEND = 'django-db'
 CELERY_CACHE_BACKEND = 'django-cache'
-CELERY_RESULT_EXTENDED = True
+
+# Flower settings
+FLOWER_BASE_URL = os.getenv('FLOWER_BASE_URL', 'http://celery:6666/flower')
+
+# Supernova API settings
+SUPERNOVA_BASE_URL = os.getenv('SUPERNOVA_BASE_URL', 'https://fc.digikala.com')
+SUPERNOVA_API_KEY = os.getenv('SUPERNOVA_API_KEY')
+SUPERNOVA_AUTH_TOKEN = os.getenv('SUPERNOVA_AUTH_TOKEN')
+
+# Local network settings
+LOCAL_IP = os.getenv('LOCAL_IP', 'localhost')

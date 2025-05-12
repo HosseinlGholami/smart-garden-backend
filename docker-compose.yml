@@ -1,29 +1,156 @@
 # docker-compose-application.yml
 
 services:
+  broker:
+    extends:
+      file: ./smart-garden-infra/docker-compose.yml
+      service: broker
+    networks:
+      - custom_network
+    healthcheck:
+      test: ["CMD", "rabbitmqctl", "status"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  influxdb:
+    extends:
+      file: ./smart-garden-infra/docker-compose.yml
+      service: influxdb
+    networks:
+      - custom_network
+
+  redis:
+    extends:
+      file: ./smart-garden-infra/docker-compose.yml
+      service: redis
+    networks:
+      - custom_network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  db:
+    extends:
+      file: ./smart-garden-infra/docker-compose.yml
+      service: db
+    networks:
+      - custom_network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  nginx:
+    extends:
+      file: ./smart-garden-infra/docker-compose.yml
+      service: nginx
+    volumes:
+      - ./smart-garden-infra/nginx_image:/etc/nginx/conf.d
+      - static_volume:/static
+      - media_volume:/media
+    depends_on:
+      - app
+    networks:
+      - custom_network
+
   app:
     build: ./django_image/
-    container_name: django_app-trf
+    container_name: django_app
     volumes:
       - ./app:/src
-    ports:
-      - "5002:5002"
-      #cd front && npm run build && cd .. && python manage.py migrate &&
-    command: sh -c ' python manage.py runserver 0.0.0.0:5002'
-    extra_hosts:
-      - "fc.digikala.com: 172.16.119.2"
+      - static_volume:/src/static
+      - media_volume:/src/media
+      - ./smart-garden-infra/mysql_image:/docker-entrypoint-initdb.d
+    expose:
+      - "8000"
     env_file:
       - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+      influxdb:
+        condition: service_started
+    command: daphne -b 0.0.0.0 -p 8000 core.asgi:application
+    networks:
+      - custom_network
 
   celery:
     build: ./django_image/
-    container_name: celery-trf
+    container_name: celery_worker
+    volumes:
+      - ./app:/src
+    env_file:
+      - .env
+    environment:
+      - C_FORCE_ROOT=true
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: celery -A core worker -l INFO --autoscale=4,8 -Q high_priority,default,low_priority
+    networks:
+      - custom_network
+
+  celery-beat:
+    build: ./django_image/
+    container_name: celery_beat
+    volumes:
+      - ./app:/src
+    env_file:
+      - .env
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+    command: celery -A core beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+    networks:
+      - custom_network
+
+  flower:
+    build: ./django_image/
+    container_name: flower
     volumes:
       - ./app:/src
     ports:
-      - 6666:6666
-    command: sh -c "echo celery started ... ;celery -A core worker -l INFO --autoscale=4,8  -B  & celery -A core flower --port=6666 --url_prefix=flower > /dev/null 2>&1"
-    extra_hosts:
-      - "fc.digikala.com: 172.16.119.2"
+      - "5555:5555"
     env_file:
       - .env
+    environment:
+      - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin123}
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      broker:
+        condition: service_healthy
+      celery:
+        condition: service_started
+    command: celery -A core flower --port=5555 --broker_api=http://guest:guest@broker:15672/api/
+    networks:
+      - custom_network
+
+networks:
+  custom_network:
+    driver: bridge
+    ipam:
+      config:
+        - subnet: 192.168.1.0/24
+
+volumes:
+  static_volume:
+  media_volume:
