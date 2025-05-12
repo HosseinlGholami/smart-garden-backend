@@ -1,0 +1,3 @@
+[submodule "smart-garden-infra"]
+	path = smart-garden-infra
+	url = https://github.com/HosseinlGholami/smart-garden-infra
