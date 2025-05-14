@@ -1,3 +1,7 @@
+this is my project which has two submodules, one of them is smart-garden-front
+and the other one is smart-garden-infa and i do have based project which is my django.
+
+
 # 🌿 Smart Garden Watering Automation
 
 A smart irrigation system using ESP32, MQTT, Django, and React. Control your garden's watering remotely, view real-time status, and schedule automatic watering — all from your phone or PC.
