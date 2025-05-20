@@ -16,43 +16,40 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path, re_path, include
 from django.views.generic import TemplateView
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from django.conf import settings
 from django.conf.urls.static import static
-from rest_framework_simplejwt.views import (
-    TokenObtainPairView,
-    TokenRefreshView,
-    TokenVerifyView,
-)
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from nd.views import FileDownloadView
 
 def not_found(request):
     raise Http404
+
+def api_root(request):
+    return JsonResponse({
+        "message": "Smart Garden API",
+        "version": "1.0.0"
+    })
 
 urlpatterns = [
     # Admin panel
     path('admin/', admin.site.urls),
     
-    # API endpoints
-    path('api/', include('nd.urls')),
-    path('api/download/<str:filename>/', FileDownloadView.as_view(), name='download_file'),
-
-    # Authentication endpoints
-    path('auth/', include('djoser.urls')),
-    path('auth/', include('djoser.urls.jwt')),
-    path('auth/jwt/create/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
-    path('auth/jwt/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
-    path('auth/jwt/verify/', TokenVerifyView.as_view(), name='token_verify'),
-
+    # Garden app API
+    path('api/garden/', include('garden.urls')),
+    
+    # User authentication and management
+    path('api/users/', include('users.urls')),
+    
     # API Documentation
     path('api/schema/', SpectacularAPIView.as_view(), name='schema'),
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
-    # Frontend
-    re_path(r'^.*$', TemplateView.as_view(template_name='index.html')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+    # Simple API root response
+    path('api/', api_root),
+]
 
+# Add static and media file serving in development mode
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)

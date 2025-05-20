@@ -1,6 +1,5 @@
 import os
 from celery import Celery
-from celery.schedules import crontab
 from celery.signals import task_failure, worker_ready
 from celery.result import AsyncResult
 from kombu import Exchange, Queue
@@ -26,37 +25,29 @@ app.conf.task_queues = task_queues
 
 # Task routing
 app.conf.task_routes = {
-    'nd.tasks.reset_worker_task_for_problem_case': {'queue': 'high_priority'},
-    'nd.tasks.*': {'queue': 'default'},
+    'tasks.*': {'queue': 'default'},
 }
 
 # Auto-discover tasks in all installed apps
 app.autodiscover_tasks()
 
-# Configure the Celery beat schedule
-app.conf.beat_schedule = {
-    'reset_worker_task_for_problem_case': {
-        'task': 'nd.tasks.reset_worker_task_for_problem_case',
-        'schedule': int(os.environ.get('WORKER_RESET_INTERVAL', 30)),  # seconds
-        'options': {
-            'queue': 'high_priority',
-            'expires': 25  # task expires after 25 seconds
-        }
-    },
-}
+# Configure the Celery beat schedule (empty)
+app.conf.beat_schedule = {}
 
 @task_failure.connect
 def handle_task_failure(task_id, exception, args, kwargs, traceback, einfo, **kw):
     """Handle task failures by logging them."""
-    from nd.models import GeneralError
+    import logging
+    logger = logging.getLogger(__name__)
     error_msg = f"Task {task_id} failed: {str(exception)}"
-    GeneralError.objects.create(error=error_msg[:255])
+    logger.error(error_msg)
 
 @worker_ready.connect
 def worker_ready_handler(**kwargs):
     """Log when a worker is ready."""
-    from nd.models import GeneralError
-    GeneralError.objects.create(error="Celery worker is ready and connected to RabbitMQ")
+    import logging
+    logger = logging.getLogger(__name__)
+    logger.info("Celery worker is ready and connected to RabbitMQ")
 
 def get_task_state(task_id):
     """Get the current state of a task."""

@@ -7,7 +7,7 @@ while ! nc -z db 3306; do
 done
 echo "MySQL is ready!"
 
-# Wait for Redis
+Wait for Redis
 echo "Waiting for Redis..."
 while ! nc -z redis 6379; do
   sleep 1
@@ -22,16 +22,16 @@ done
 echo "RabbitMQ is ready!"
 
 # Apply database migrations
-echo "Applying database migrations..."
-python manage.py migrate
+# echo "Applying database migrations..."
+# python manage.py migrate
 
 # Create cache table
-echo "Creating cache table..."
-python manage.py createcachetable
+# echo "Creating cache table..."
+# python manage.py createcachetable
 
 # Collect static files
-echo "Collecting static files..."
-python manage.py collectstatic --noinput
+# echo "Collecting static files..."
+# python manage.py collectstatic --noinput
 
 # Start the application
 echo "Starting application..."
