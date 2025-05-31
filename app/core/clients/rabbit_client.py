@@ -37,7 +37,7 @@ class RabbitMQClient:
         port: int = settings.RABBITMQ_PORT,
         virtual_host: str = settings.RABBITMQ_VHOST,
         username: str = settings.RABBITMQ_USER,
-        password: str = settings.RABBITMQ_PASSWORD,
+        password: str = settings.RABBITMQ_PASS,
         connection_attempts: int = 3,
         retry_delay: int = 5
     ):
