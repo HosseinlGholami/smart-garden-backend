@@ -87,7 +87,7 @@ def purge_rabbitmq_queue(
     """
     try:
         username = username or settings.RABBITMQ_USER
-        password = password or settings.RABBITMQ_PASSWORD
+        password = password or settings.RABBITMQ_PASS
         host = host or settings.RABBITMQ_HOST
         
         url = f'http://{host}:{port}/rabbit/api/queues/{vhost}/{queue_name}/contents'

@@ -13,6 +13,33 @@ https://docs.djangoproject.com/en/4.1/ref/settings/
 from pathlib import Path
 import os
 from datetime import timedelta
+import secrets
+import string
+
+def generate_secret_key():
+    """Generate a secure secret key for Django."""
+    # Use Django's recommended approach
+    chars = string.ascii_letters + string.digits + '!@#$%^&*(-_=+)'
+    return ''.join(secrets.choice(chars) for i in range(64))
+
+def get_secret_key():
+    """Get secret key from environment or generate a secure one."""
+    secret_key = os.environ.get('SECRET_KEY')
+    
+    if not secret_key:
+        # In development, we can use a generated key
+        # In production, this should always come from environment
+        if os.environ.get('DEBUG', '1') == '1':
+            print("WARNING: Using generated SECRET_KEY for development. Set SECRET_KEY environment variable for production!")
+            return generate_secret_key()
+        else:
+            raise ValueError("SECRET_KEY environment variable is required in production")
+    
+    # Validate the provided secret key
+    if len(secret_key) < 50:
+        raise ValueError(f"SECRET_KEY must be at least 50 characters long, got {len(secret_key)}")
+    
+    return secret_key
 
 # =====================================
 # =====related to load react app======
@@ -34,7 +61,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
+SECRET_KEY = get_secret_key()
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', '1') == '1'
 ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').split() + ['185.252.86.186', 'haj-ebram.ir']
@@ -314,3 +341,9 @@ CORS_ALLOW_HEADERS = [
     'x-csrftoken',
     'x-requested-with',
 ]
+
+# InfluxDB Settings
+INFLUXDB_URL = os.environ.get('INFLUXDB_URL', 'http://influxdb:8086')
+INFLUXDB_TOKEN = os.environ.get('INFLUXDB_TOKEN', '')
+INFLUXDB_ORG = os.environ.get('INFLUXDB_ORG', 'smart-garden')
+INFLUXDB_BUCKET = os.environ.get('INFLUXDB_BUCKET', 'sensor-data')
