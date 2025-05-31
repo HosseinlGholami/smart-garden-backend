@@ -37,7 +37,7 @@ MEDIA_ROOT = os.path.join(BASE_DIR, 'media')
 SECRET_KEY = os.environ.get('SECRET_KEY', 'django-insecure-change-this-in-production')
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DEBUG', '1') == '1'
-ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').split() + ['185.252.86.186']
+ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1]').split() + ['185.252.86.186', 'haj-ebram.ir']
 
 # Application definition
 INSTALLED_APPS = [
@@ -84,9 +84,11 @@ MIDDLEWARE = [
 CORS_ALLOWED_ORIGINS = os.environ.get('CORS_ALLOWED_ORIGINS', 'http://localhost:80,http://127.0.0.1:80').split(',')
 CORS_ALLOWED_ORIGINS.append('http://185.252.86.186')
 CORS_ALLOWED_ORIGINS.append('https://185.252.86.186')
+CORS_ALLOWED_ORIGINS.append('http://haj-ebram.ir')
+CORS_ALLOWED_ORIGINS.append('https://haj-ebram.ir')
 CORS_ALLOW_CREDENTIALS = True
 
-CSRF_TRUSTED_ORIGINS = ['http://185.252.86.186', 'https://185.252.86.186']
+CSRF_TRUSTED_ORIGINS = ['http://185.252.86.186', 'https://185.252.86.186', 'http://haj-ebram.ir', 'https://haj-ebram.ir']
 CSRF_TRUSTED_ORIGINS.extend(CORS_ALLOWED_ORIGINS)
 # ===================================================
 

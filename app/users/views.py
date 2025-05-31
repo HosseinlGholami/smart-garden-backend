@@ -2,7 +2,8 @@ from django.shortcuts import render
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from rest_framework_simplejwt.tokens import RefreshToken
 from .models import User
 from .serializers import CustomUserSerializer
 from .permissions import IsAdmin, IsManager
@@ -30,6 +31,23 @@ class UserViewSet(viewsets.ReadOnlyModelViewSet):
         """Get the current authenticated user information."""
         serializer = self.get_serializer(request.user)
         return Response(serializer.data)
+    
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
+    def guest_login(self, request):
+        """Login as guest user and get JWT token."""
+        try:
+            guest_user = User.objects.get(email='guest@smartgarden.com')
+            refresh = RefreshToken.for_user(guest_user)
+            
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'user': CustomUserSerializer(guest_user).data
+            })
+        except User.DoesNotExist:
+            return Response({
+                'error': 'Guest user not found. Please run load_mock_data command to create it.'
+            }, status=status.HTTP_404_NOT_FOUND)
     
     @action(detail=True, methods=['post'], permission_classes=[IsAdmin])
     def activate(self, request, pk=None):

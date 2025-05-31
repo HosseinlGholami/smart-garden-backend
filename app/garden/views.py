@@ -1,7 +1,7 @@
 from rest_framework import viewsets, status
 from rest_framework.decorators import action
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from django.utils import timezone
 from datetime import datetime
 from drf_spectacular.utils import extend_schema, OpenApiParameter, OpenApiExample
@@ -19,7 +19,26 @@ from .serializers import (
 from .permissions import IsGardenAdmin, IsGardenManager, IsGardenStaff
 
 
-class GardenViewSet(viewsets.ModelViewSet):
+# Add this function to check for mock mode
+def is_mock_mode(request):
+    """Check if request is in mock mode (use_mock=true)."""
+    return request.query_params.get('use_mock', 'false').lower() == 'true'
+
+
+# Base ViewSet for mock-aware authentication
+class MockAwareViewSet(viewsets.ModelViewSet):
+    """Base ViewSet that allows mock mode without authentication."""
+    
+    def get_permissions(self):
+        """
+        Override to bypass authentication when in mock mode.
+        """
+        if is_mock_mode(self.request):
+            return [AllowAny()]
+        return super().get_permissions()
+
+
+class GardenViewSet(MockAwareViewSet):
     """API endpoint for gardens."""
     queryset = Garden.objects.all()
     serializer_class = GardenSerializer
@@ -37,7 +56,7 @@ class GardenViewSet(viewsets.ModelViewSet):
         return Garden.objects.filter(user_accesses__user=user).distinct()
 
 
-class GardenAccessViewSet(viewsets.ModelViewSet):
+class GardenAccessViewSet(MockAwareViewSet):
     """API endpoint for managing garden access."""
     queryset = GardenAccess.objects.all()
     serializer_class = GardenAccessSerializer
@@ -61,7 +80,7 @@ class GardenAccessViewSet(viewsets.ModelViewSet):
 
 
 # Smart Garden System ViewSets
-class ValveViewSet(viewsets.ModelViewSet):
+class ValveViewSet(MockAwareViewSet):
     """API endpoint for valves."""
     queryset = Valve.objects.all()
     serializer_class = ValveSerializer
@@ -178,7 +197,7 @@ class ValveViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PowerViewSet(viewsets.ModelViewSet):
+class PowerViewSet(MockAwareViewSet):
     """API endpoint for power management."""
     queryset = Power.objects.all()
     serializer_class = PowerSerializer
@@ -198,7 +217,7 @@ class PowerViewSet(viewsets.ModelViewSet):
         return Response({'status': power.status})
 
 
-class PumpViewSet(viewsets.ModelViewSet):
+class PumpViewSet(MockAwareViewSet):
     """API endpoint for pump control."""
     queryset = Pump.objects.all()
     serializer_class = PumpSerializer
@@ -267,7 +286,7 @@ class PumpViewSet(viewsets.ModelViewSet):
             )
 
 
-class SystemLogViewSet(viewsets.ModelViewSet):
+class SystemLogViewSet(MockAwareViewSet):
     """API endpoint for system logs."""
     queryset = SystemLog.objects.all()
     serializer_class = SystemLogSerializer
@@ -290,7 +309,7 @@ class SystemLogViewSet(viewsets.ModelViewSet):
         return queryset
 
 
-class ScheduleViewSet(viewsets.ModelViewSet):
+class ScheduleViewSet(MockAwareViewSet):
     """API endpoint for watering schedules."""
     queryset = Schedule.objects.all()
     serializer_class = ScheduleSerializer
@@ -320,7 +339,7 @@ class ScheduleViewSet(viewsets.ModelViewSet):
         })
 
 
-class WaterUsageViewSet(viewsets.ModelViewSet):
+class WaterUsageViewSet(MockAwareViewSet):
     """API endpoint for water usage data."""
     queryset = WaterUsage.objects.all()
     serializer_class = WaterUsageSerializer
@@ -366,7 +385,7 @@ class WaterUsageViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class PowerConsumptionViewSet(viewsets.ModelViewSet):
+class PowerConsumptionViewSet(MockAwareViewSet):
     """API endpoint for power consumption data."""
     queryset = PowerConsumption.objects.all()
     serializer_class = PowerConsumptionSerializer
@@ -415,8 +434,10 @@ class PowerConsumptionViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-class SystemControlViewSet(viewsets.ViewSet):
+class SystemControlViewSet(MockAwareViewSet):
     """API endpoint for system-wide controls and status."""
+    permission_classes = [IsAuthenticated]
+    basename = 'system'
     
     @extend_schema(
         summary="Emergency stop",
@@ -513,7 +534,7 @@ class SystemControlViewSet(viewsets.ViewSet):
         request={"application/json": {"example": {"use_mock": True}}},
         responses={200: {"example": {"success": True, "use_mock_api": True, "message": "Mock API mode enabled"}}}
     )
-    @action(detail=False, methods=['post'])
+    @action(detail=False, methods=['post'], permission_classes=[AllowAny])
     def mock_api_toggle(self, request):
         """Toggle mock API mode for testing and development."""
         # This is a server-side setting that could influence how the frontend behaves
@@ -526,4 +547,8 @@ class SystemControlViewSet(viewsets.ViewSet):
             'success': True,
             'use_mock_api': use_mock,
             'message': f"Mock API mode {'enabled' if use_mock else 'disabled'}"
-        }) 
+        })
+    
+    def get_queryset(self):
+        """For ViewSet compatibility."""
+        return [] 

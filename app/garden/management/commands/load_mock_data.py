@@ -1,7 +1,10 @@
 from django.core.management.base import BaseCommand
 from django.utils import timezone
 from datetime import datetime, timedelta
-from garden.models import Garden, Valve, Power, Pump, Schedule, SystemLog, WaterUsage, PowerConsumption
+from django.contrib.auth import get_user_model
+from garden.models import Garden, GardenAccess, Valve, Power, Pump, Schedule, SystemLog, WaterUsage, PowerConsumption
+
+User = get_user_model()
 
 class Command(BaseCommand):
     help = 'Load mock data from frontend into the database'
@@ -21,6 +24,41 @@ class Command(BaseCommand):
             self.stdout.write(self.style.ERROR(f'Error getting garden: {e}'))
             return
         
+        # Create guest user if it doesn't exist
+        try:
+            guest_email = 'guest@smartgarden.com'
+            guest_user, created = User.objects.get_or_create(
+                email=guest_email,
+                defaults={
+                    'first_name': 'Guest',
+                    'last_name': 'User',
+                    'role': 'staff',
+                    'is_active': True
+                }
+            )
+            
+            if created:
+                guest_user.set_password('guest123')  # Set a simple password
+                guest_user.save()
+                self.stdout.write(self.style.SUCCESS(f'Created guest user: {guest_email}'))
+            else:
+                self.stdout.write(self.style.SUCCESS(f'Using existing guest user: {guest_email}'))
+                
+            # Give guest user access to the garden
+            garden_access, access_created = GardenAccess.objects.get_or_create(
+                user=guest_user,
+                garden=garden,
+                defaults={'role': 'staff'}
+            )
+            
+            if access_created:
+                self.stdout.write(self.style.SUCCESS(f'Granted guest user access to garden: {garden.name}'))
+            else:
+                self.stdout.write(self.style.SUCCESS(f'Guest user already has access to garden: {garden.name}'))
+                
+        except Exception as e:
+            self.stdout.write(self.style.ERROR(f'Error creating guest user: {e}'))
+            
         # Clear existing data
         self.stdout.write('Clearing existing data...')
         Valve.objects.filter(garden=garden).delete()
