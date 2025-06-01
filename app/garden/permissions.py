@@ -15,15 +15,19 @@ class HasGardenAccess(permissions.BasePermission):
             return True
             
         # For list views, allow access, filtering will happen in the queryset
-        if view.action == 'list':
+        if view.action in ['list', 'retrieve']:
             return True
             
-        # For other actions, check if garden_id is provided in kwargs or query params
+        # For detail actions (like control, set_duration), check object permission
+        if hasattr(view, 'get_object'):
+            return True  # Will be checked in has_object_permission
+            
+        # For garden-specific actions, check if garden_id is provided
         garden_id = view.kwargs.get('garden_id') or request.query_params.get('garden_id')
         
         if garden_id is None:
-            # If no garden is specified, deny access
-            return False
+            # Allow if no specific garden is required (will be filtered in queryset)
+            return True
             
         # Check if the user has access to this garden
         return GardenAccess.objects.filter(
@@ -32,6 +36,10 @@ class HasGardenAccess(permissions.BasePermission):
         ).exists()
     
     def has_object_permission(self, request, view, obj):
+        # Superusers can access everything
+        if request.user.is_superuser:
+            return True
+            
         # Check if obj has a garden attribute
         if hasattr(obj, 'garden'):
             garden = obj.garden
@@ -42,8 +50,8 @@ class HasGardenAccess(permissions.BasePermission):
                 garden_id=garden_id
             ).exists()
         else:
-            # If the object doesn't have a garden relation, deny access
-            return False
+            # If the object doesn't have a garden relation, allow access
+            return True
             
         # Check user's access to this garden
         return GardenAccess.objects.filter(

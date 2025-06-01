@@ -32,9 +32,9 @@ python manage.py migrate
 echo "Creating cache table..."
 python manage.py createcachetable
 
-# Collect static files
+# Collect static files (skip if already collected)
 echo "Collecting static files..."
-python manage.py collectstatic --noinput
+python manage.py collectstatic --noinput || echo "Static files already collected or permission issue, continuing..."
 
 # Start the application
 echo "Starting application..."

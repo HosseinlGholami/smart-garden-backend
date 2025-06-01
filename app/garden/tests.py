@@ -25,6 +25,55 @@ from .permissions import IsGardenAdmin, IsGardenManager, IsGardenStaff
 User = get_user_model()
 
 
+class AuthenticatedAPITestCase(APITestCase):
+    """Base test case with authenticated user setup."""
+    
+    def setUp(self):
+        """Set up authenticated user and garden access."""
+        super().setUp()
+        
+        # Create test user
+        self.user = User.objects.create_user(
+            email='test@example.com',
+            password='testpass123',
+            first_name='Test',
+            last_name='User',
+            role='admin'
+        )
+        
+        # Create test garden
+        self.garden = Garden.objects.create(
+            name="Test Garden",
+            description="A test garden for API testing",
+            location="Test Location"
+        )
+        
+        # Give user access to garden
+        self.garden_access = GardenAccess.objects.create(
+            user=self.user,
+            garden=self.garden,
+            role='admin'
+        )
+        
+        # Authenticate user with JWT token
+        self.authenticate_user(self.user)
+    
+    def authenticate_user(self, user):
+        """Authenticate user with JWT token."""
+        refresh = RefreshToken.for_user(user)
+        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
+    
+    def create_test_user(self, email, role='staff'):
+        """Helper method to create test users."""
+        return User.objects.create_user(
+            email=email,
+            password='testpass123',
+            first_name='Test',
+            last_name='User',
+            role=role
+        )
+
+
 class GardenModelTest(TestCase):
     """Test cases for Garden model."""
     
@@ -238,32 +287,21 @@ class GardenSerializerTest(TestCase):
         self.assertEqual(garden.name, self.garden_data['name'])
 
 
-class ValveAPITest(APITestCase):
+class ValveAPITest(AuthenticatedAPITestCase):
     """Test cases for Valve API endpoints."""
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='test@example.com',
-            password='testpass123',
-            role='admin'
-        )
-        self.garden = Garden.objects.create(name="Test Garden")
-        self.garden_access = GardenAccess.objects.create(
-            user=self.user,
-            garden=self.garden,
-            role='admin'
-        )
+        """Set up test data."""
+        super().setUp()
+        
+        # Create test valve
         self.valve = Valve.objects.create(
             garden=self.garden,
             number=1,
             status='off',
             duration=300
         )
-        
-        # Set up JWT authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
-    
+
     def test_valve_list(self):
         """Test retrieving valve list."""
         url = reverse('valve-list')
@@ -336,6 +374,11 @@ class ValveAPITest(APITestCase):
 class MockAPITest(APITestCase):
     """Test cases for mock API functionality."""
     
+    def setUp(self):
+        """Set up test data without authentication for mock mode."""
+        # Mock mode doesn't require authentication
+        pass
+    
     def test_valve_status_with_mock(self):
         """Test valve status endpoint with mock mode."""
         url = reverse('valve-status') + '?use_mock=true'
@@ -350,34 +393,21 @@ class MockAPITest(APITestCase):
         self.assertEqual(response.status_code, status.HTTP_200_OK)
 
 
-class SystemControlAPITest(APITestCase):
+class SystemControlAPITest(AuthenticatedAPITestCase):
     """Test cases for system control API endpoints."""
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='admin@example.com',
-            password='adminpass123',
-            role='admin'
-        )
-        self.garden = Garden.objects.create(name="Test Garden")
-        self.garden_access = GardenAccess.objects.create(
-            user=self.user,
-            garden=self.garden,
-            role='admin'
-        )
+        """Set up test data."""
+        super().setUp()
         
-        # Create test valves
+        # Create test valves in the same garden
         for i in range(1, 4):
             Valve.objects.create(
                 garden=self.garden,
                 number=i,
                 status='on'  # Start with valves open
             )
-        
-        # Set up authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
-    
+
     def test_emergency_stop(self):
         """Test emergency stop functionality."""
         url = reverse('system-emergency-stop')
@@ -407,24 +437,16 @@ class SystemControlAPITest(APITestCase):
         self.assertIn('lastChecked', response.data)
 
 
-class ScheduleAPITest(APITestCase):
+class ScheduleAPITest(AuthenticatedAPITestCase):
     """Test cases for Schedule API endpoints."""
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='manager@example.com',
-            password='managerpass123',
-            role='manager'
-        )
-        self.garden = Garden.objects.create(name="Test Garden")
-        self.garden_access = GardenAccess.objects.create(
-            user=self.user,
-            garden=self.garden,
-            role='manager'
-        )
+        """Set up test data."""
+        super().setUp()
         
-        self.schedule_data = {
-            'garden': self.garden.id,
+        # Schedule data for testing (for model creation)
+        self.schedule_data_model = {
+            'garden': self.garden,  # Garden instance for model
             'startTime': '08:00 AM',
             'duration': '30 minutes',
             'target': 'Valve 1',
@@ -432,9 +454,15 @@ class ScheduleAPITest(APITestCase):
             'isActive': True
         }
         
-        # Set up authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
+        # Schedule data for API requests (JSON serializable)
+        self.schedule_data = {
+            'garden': self.garden.id,  # Garden ID for API
+            'startTime': '08:00 AM',
+            'duration': '30 minutes',
+            'target': 'Valve 1',
+            'repeat': 'Daily',
+            'isActive': True
+        }
     
     def test_create_schedule(self):
         """Test creating a new schedule."""
@@ -449,7 +477,7 @@ class ScheduleAPITest(APITestCase):
     
     def test_schedule_toggle(self):
         """Test toggling schedule active status."""
-        schedule = Schedule.objects.create(**self.schedule_data)
+        schedule = Schedule.objects.create(**self.schedule_data_model)
         url = reverse('schedule-toggle', kwargs={'pk': schedule.pk})
         
         original_status = schedule.isActive
@@ -477,35 +505,18 @@ class ScheduleAPITest(APITestCase):
         self.assertEqual(schedule.days, ['monday', 'wednesday', 'friday'])
 
 
-class PermissionTest(APITestCase):
+class PermissionTest(AuthenticatedAPITestCase):
     """Test cases for permission system."""
     
     def setUp(self):
-        # Create users with different roles
-        self.admin_user = User.objects.create_user(
-            email='admin@example.com',
-            password='adminpass123',
-            role='admin'
-        )
-        self.manager_user = User.objects.create_user(
-            email='manager@example.com',
-            password='managerpass123',
-            role='manager'
-        )
-        self.staff_user = User.objects.create_user(
-            email='staff@example.com',
-            password='staffpass123',
-            role='staff'
-        )
+        """Set up users with different roles and garden access."""
+        super().setUp()
         
-        self.garden = Garden.objects.create(name="Test Garden")
+        # Create additional users with different roles (admin user already created in parent)
+        self.manager_user = self.create_test_user('manager@example.com', 'manager')
+        self.staff_user = self.create_test_user('staff@example.com', 'staff')
         
-        # Create garden access for each user
-        GardenAccess.objects.create(
-            user=self.admin_user,
-            garden=self.garden,
-            role='admin'
-        )
+        # Create garden access for each user (admin already has access from parent)
         GardenAccess.objects.create(
             user=self.manager_user,
             garden=self.garden,
@@ -524,7 +535,7 @@ class PermissionTest(APITestCase):
     
     def test_admin_can_access_all(self):
         """Test that admin users can access all endpoints."""
-        self._authenticate_user(self.admin_user)
+        self._authenticate_user(self.user)  # Use the admin user from parent
         
         # Test garden list access
         url = reverse('garden-list')
@@ -541,6 +552,9 @@ class PermissionTest(APITestCase):
     
     def test_unauthenticated_access_denied(self):
         """Test that unauthenticated users are denied access."""
+        # Clear authentication
+        self.client.credentials()
+        
         url = reverse('valve-list')
         response = self.client.get(url)
         self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
@@ -559,21 +573,12 @@ class PermissionTest(APITestCase):
         self.assertEqual(response.data[0]['name'], "Test Garden")
 
 
-class DataAnalyticsTest(APITestCase):
+class DataAnalyticsTest(AuthenticatedAPITestCase):
     """Test cases for data analytics endpoints."""
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='analyst@example.com',
-            password='analystpass123',
-            role='manager'
-        )
-        self.garden = Garden.objects.create(name="Analytics Garden")
-        GardenAccess.objects.create(
-            user=self.user,
-            garden=self.garden,
-            role='manager'
-        )
+        """Set up test data for analytics."""
+        super().setUp()
         
         # Create test data
         for i in range(7):  # 7 days of data
@@ -592,11 +597,7 @@ class DataAnalyticsTest(APITestCase):
                 consumption=45.0 + i,
                 date=date
             )
-        
-        # Set up authentication
-        refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
-    
+
     def test_water_usage_by_period(self):
         """Test water usage analytics endpoint."""
         url = reverse('waterusage-by-period')
@@ -634,17 +635,20 @@ class DataAnalyticsTest(APITestCase):
         self.assertEqual(len(manual_logs), 1)
 
 
-class ErrorHandlingTest(APITestCase):
+class ErrorHandlingTest(AuthenticatedAPITestCase):
     """Test cases for error handling."""
     
     def setUp(self):
-        self.user = User.objects.create_user(
-            email='error@example.com',
-            password='errorpass123'
+        """Set up test data."""
+        super().setUp()
+        
+        # Create test valve for error testing
+        self.valve = Valve.objects.create(
+            garden=self.garden,
+            number=1,
+            status='off'
         )
-        refresh = RefreshToken.for_user(self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f'JWT {refresh.access_token}')
-    
+
     def test_nonexistent_valve_control(self):
         """Test controlling non-existent valve returns 404."""
         url = reverse('valve-control', kwargs={'pk': 999})

@@ -88,6 +88,10 @@ class ValveViewSet(MockAwareViewSet):
     
     def get_queryset(self):
         """Filter valves based on user garden access."""
+        # In mock mode, return all valves without authentication
+        if is_mock_mode(self.request):
+            return Valve.objects.all()
+            
         user = self.request.user
         
         # Superusers can see all valves
@@ -255,11 +259,14 @@ class PumpViewSet(MockAwareViewSet):
             pump.status = 'on'
             pump.save()
             
-            # Log the event
-            SystemLog.objects.create(
-                event="Pump started",
-                source=request.data.get('source', 'Manual')
-            )
+            # Log the event in first available garden
+            first_garden = Garden.objects.first()
+            if first_garden:
+                SystemLog.objects.create(
+                    garden=first_garden,
+                    event="Pump started",
+                    source=request.data.get('source', 'Manual')
+                )
             
             return Response({
                 'success': True,
@@ -269,11 +276,14 @@ class PumpViewSet(MockAwareViewSet):
             pump.status = 'off'
             pump.save()
             
-            # Log the event
-            SystemLog.objects.create(
-                event="Pump stopped",
-                source=request.data.get('source', 'Manual')
-            )
+            # Log the event in first available garden
+            first_garden = Garden.objects.first()
+            if first_garden:
+                SystemLog.objects.create(
+                    garden=first_garden,
+                    event="Pump stopped",
+                    source=request.data.get('source', 'Manual')
+                )
             
             return Response({
                 'success': True,
@@ -452,6 +462,13 @@ class SystemControlViewSet(MockAwareViewSet):
         for valve in valves:
             valve.status = 'off'
             valve.save()
+            
+            # Log the event for each garden
+            SystemLog.objects.create(
+                garden=valve.garden,
+                event=f"Emergency stop - Valve {valve.number} turned off",
+                source="Manual"
+            )
         
         # Turn off pump
         pump = Pump.objects.first()
@@ -459,11 +476,14 @@ class SystemControlViewSet(MockAwareViewSet):
             pump.status = 'off'
             pump.save()
         
-        # Log the event
-        SystemLog.objects.create(
-            event="Emergency stop activated",
-            source="Manual"
-        )
+        # Log general emergency stop event in first available garden
+        first_garden = Garden.objects.first()
+        if first_garden:
+            SystemLog.objects.create(
+                garden=first_garden,
+                event="Emergency stop activated",
+                source="Manual"
+            )
         
         return Response({'success': True})
     
@@ -481,11 +501,14 @@ class SystemControlViewSet(MockAwareViewSet):
             power.status = 'on'
             power.save()
         
-        # Log the event
-        SystemLog.objects.create(
-            event="System reset performed",
-            source="Manual"
-        )
+        # Log the event in first available garden
+        first_garden = Garden.objects.first()
+        if first_garden:
+            SystemLog.objects.create(
+                garden=first_garden,
+                event="System reset performed",
+                source="Manual"
+            )
         
         return Response({'success': True})
     

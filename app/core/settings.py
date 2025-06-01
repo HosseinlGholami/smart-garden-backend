@@ -15,6 +15,7 @@ import os
 from datetime import timedelta
 import secrets
 import string
+import sys
 
 def generate_secret_key():
     """Generate a secure secret key for Django."""
@@ -195,9 +196,21 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD', 'root'),
         'HOST': os.environ.get('DB_HOST', 'db'),
         'PORT': os.environ.get('DB_PORT', '3306'),
+        'TEST': {
+            'NAME': 'test_smart_garden',
+        },
     }
 }
 
+# Use SQLite for testing to avoid MySQL connection issues
+if 'test' in sys.argv or 'test_coverage' in sys.argv:
+    DATABASES['default'] = {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': ':memory:',
+        'TEST': {
+            'NAME': ':memory:',
+        },
+    }
 
 # Password validation
 # https://docs.djangoproject.com/en/4.1/ref/settings/#auth-password-validators

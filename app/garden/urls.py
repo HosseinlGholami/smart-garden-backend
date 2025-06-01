@@ -2,6 +2,7 @@ from django.urls import path, include
 from rest_framework.routers import DefaultRouter
 from drf_spectacular.views import SpectacularAPIView, SpectacularSwaggerView
 from .views import (
+    GardenViewSet, GardenAccessViewSet,
     ValveViewSet, PowerViewSet, PumpViewSet, SystemLogViewSet,
     ScheduleViewSet, WaterUsageViewSet, PowerConsumptionViewSet,
     SystemControlViewSet
@@ -9,6 +10,10 @@ from .views import (
 
 # Create a router and register our viewsets with it
 router = DefaultRouter()
+
+# Register Garden management endpoints
+router.register(r'gardens', GardenViewSet)
+router.register(r'garden-access', GardenAccessViewSet)
 
 # Register API endpoints for Smart Garden System
 router.register(r'valves', ValveViewSet)

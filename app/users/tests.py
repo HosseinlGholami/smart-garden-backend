@@ -544,7 +544,7 @@ class UserRolePermissionTest(APITestCase):
         response = self.client.patch(url, update_data, format='json')
         
         # Role change should be ignored or forbidden
-        self.user.refresh_from_db()
+        self.staff_user.refresh_from_db()
         self.assertEqual(self.staff_user.role, 'staff')
 
 
