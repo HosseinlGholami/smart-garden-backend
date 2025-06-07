@@ -11,8 +11,8 @@ from rest_framework import status
 from rest_framework_simplejwt.tokens import RefreshToken
 import json
 
-from .models import User, UserManager
-from .serializers import CustomUserCreateSerializer, CustomUserSerializer
+from users.models import User, UserManager
+from users.serializers import CustomUserCreateSerializer, CustomUserSerializer
 
 User = get_user_model()
 
