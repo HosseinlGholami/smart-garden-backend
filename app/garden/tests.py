@@ -12,15 +12,15 @@ from rest_framework_simplejwt.tokens import RefreshToken
 from datetime import datetime, timedelta
 import json
 
-from .models import (
-    Garden, GardenAccess, Valve, Power, Pump, Schedule, 
+from garden.models import (
+    Garden, GardenAccess, Valve, Power, Pump, Schedule,
     SystemLog, WaterUsage, PowerConsumption
 )
-from .serializers import (
-    GardenSerializer, ValveSerializer, PowerSerializer, 
+from garden.serializers import (
+    GardenSerializer, ValveSerializer, PowerSerializer,
     PumpSerializer, ScheduleSerializer, SystemLogSerializer
 )
-from .permissions import IsGardenAdmin, IsGardenManager, IsGardenStaff
+from garden.permissions import IsGardenAdmin, IsGardenManager, IsGardenStaff
 
 User = get_user_model()
 
@@ -78,7 +78,7 @@ class GardenModelTest(TestCase):
     """Test cases for Garden model."""
     
     def setUp(self):
-        from .models import Garden
+        from garden.models import Garden
         
         self.garden = Garden.objects.create(
             name="Test Garden",
