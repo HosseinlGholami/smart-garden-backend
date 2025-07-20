@@ -205,53 +205,186 @@ class PowerViewSet(MockAwareViewSet):
     """API endpoint for power management."""
     queryset = Power.objects.all()
     serializer_class = PowerSerializer
+    permission_classes = [IsAuthenticated, IsGardenStaff]
+    
+    def get_queryset(self):
+        """Filter power records based on user garden access."""
+        # In mock mode, return all power records without authentication
+        if is_mock_mode(self.request):
+            return Power.objects.all()
+            
+        user = self.request.user
+        
+        # Superusers can see all power records
+        if user.is_superuser:
+            return Power.objects.all()
+            
+        # Filter by garden_id if provided in query params
+        garden_id = self.request.query_params.get('garden_id')
+        if garden_id:
+            if GardenAccess.objects.filter(user=user, garden_id=garden_id).exists():
+                return Power.objects.filter(garden_id=garden_id)
+            return Power.objects.none()
+            
+        # Otherwise, return power records from all accessible gardens
+        accessible_gardens = Garden.objects.filter(user_accesses__user=user)
+        return Power.objects.filter(garden__in=accessible_gardens)
     
     @extend_schema(
+        parameters=[
+            OpenApiParameter(name="garden_id", description="Filter by garden ID", required=False, type=int)
+        ],
         summary="Get power status",
-        description="Returns the current power status (on/off)",
+        description="Returns the current power status (on/off) for a specific garden",
         responses={200: {"example": {"status": "on"}}}
     )
     @action(detail=False)
     def status(self, request):
-        """Get the current power status."""
-        power = Power.objects.first()
-        if not power:
-            power = Power.objects.create(status='on')
+        """Get the current power status for a garden."""
+        garden_id = request.query_params.get('garden_id')
         
-        return Response({'status': power.status})
+        if not garden_id:
+            return Response(
+                {'error': 'garden_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user has access to this garden
+        if not request.user.is_superuser and not GardenAccess.objects.filter(user=request.user, garden_id=garden_id).exists():
+            return Response(
+                {'error': 'Access denied to this garden'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            garden = Garden.objects.get(id=garden_id)
+        except Garden.DoesNotExist:
+            return Response(
+                {'error': 'Garden not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        power, created = Power.objects.get_or_create(
+            garden=garden,
+            defaults={'status': 'on'}
+        )
+        
+        return Response({
+            'status': power.status,
+            'consumption': 0,  # Mock consumption for now
+            'garden_id': garden.id
+        })
 
 
 class PumpViewSet(MockAwareViewSet):
     """API endpoint for pump control."""
     queryset = Pump.objects.all()
     serializer_class = PumpSerializer
+    permission_classes = [IsAuthenticated, IsGardenStaff]
+    
+    def get_queryset(self):
+        """Filter pump records based on user garden access."""
+        # In mock mode, return all pump records without authentication
+        if is_mock_mode(self.request):
+            return Pump.objects.all()
+            
+        user = self.request.user
+        
+        # Superusers can see all pump records
+        if user.is_superuser:
+            return Pump.objects.all()
+            
+        # Filter by garden_id if provided in query params
+        garden_id = self.request.query_params.get('garden_id')
+        if garden_id:
+            if GardenAccess.objects.filter(user=user, garden_id=garden_id).exists():
+                return Pump.objects.filter(garden_id=garden_id)
+            return Pump.objects.none()
+            
+        # Otherwise, return pump records from all accessible gardens
+        accessible_gardens = Garden.objects.filter(user_accesses__user=user)
+        return Pump.objects.filter(garden__in=accessible_gardens)
     
     @extend_schema(
+        parameters=[
+            OpenApiParameter(name="garden_id", description="Filter by garden ID", required=False, type=int)
+        ],
         summary="Get pump status",
-        description="Returns the current pump status (on/off)",
+        description="Returns the current pump status (on/off) for a specific garden",
         responses={200: {"example": {"status": "off"}}}
     )
     @action(detail=False)
     def status(self, request):
-        """Get the current pump status."""
-        pump = Pump.objects.first()
-        if not pump:
-            pump = Pump.objects.create(status='off')
+        """Get the current pump status for a garden."""
+        garden_id = request.query_params.get('garden_id')
         
-        return Response({'status': pump.status})
+        if not garden_id:
+            return Response(
+                {'error': 'garden_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user has access to this garden
+        if not request.user.is_superuser and not GardenAccess.objects.filter(user=request.user, garden_id=garden_id).exists():
+            return Response(
+                {'error': 'Access denied to this garden'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            garden = Garden.objects.get(id=garden_id)
+        except Garden.DoesNotExist:
+            return Response(
+                {'error': 'Garden not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        pump, created = Pump.objects.get_or_create(
+            garden=garden,
+            defaults={'status': 'off'}
+        )
+        
+        return Response({
+            'status': pump.status,
+            'garden_id': garden.id
+        })
     
     @extend_schema(
         summary="Control pump",
-        description="Start or stop the water pump",
-        request={"application/json": {"example": {"action": "start", "source": "Manual"}}},
+        description="Start or stop the water pump for a specific garden",
+        request={"application/json": {"example": {"action": "start", "source": "Manual", "garden_id": 1}}},
         responses={200: {"example": {"success": True, "pump": {"status": "on"}}}}
     )
     @action(detail=False, methods=['post'])
     def control(self, request):
-        """Control the pump (start/stop)."""
-        pump = Pump.objects.first()
-        if not pump:
-            pump = Pump.objects.create(status='off')
+        """Control the pump (start/stop) for a specific garden."""
+        garden_id = request.data.get('garden_id')
+        
+        if not garden_id:
+            return Response(
+                {'error': 'garden_id is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user has access to this garden
+        if not request.user.is_superuser and not GardenAccess.objects.filter(user=request.user, garden_id=garden_id).exists():
+            return Response(
+                {'error': 'Access denied to this garden'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            garden = Garden.objects.get(id=garden_id)
+        except Garden.DoesNotExist:
+            return Response(
+                {'error': 'Garden not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        pump, created = Pump.objects.get_or_create(
+            garden=garden,
+            defaults={'status': 'off'}
+        )
         
         action = request.data.get('action', '')
         
@@ -259,14 +392,11 @@ class PumpViewSet(MockAwareViewSet):
             pump.status = 'on'
             pump.save()
             
-            # Log the event in first available garden
-            first_garden = Garden.objects.first()
-            if first_garden:
-                SystemLog.objects.create(
-                    garden=first_garden,
-                    event="Pump started",
-                    source=request.data.get('source', 'Manual')
-                )
+            SystemLog.objects.create(
+                garden=garden,
+                event="Pump started",
+                source=request.data.get('source', 'Manual')
+            )
             
             return Response({
                 'success': True,
@@ -276,14 +406,11 @@ class PumpViewSet(MockAwareViewSet):
             pump.status = 'off'
             pump.save()
             
-            # Log the event in first available garden
-            first_garden = Garden.objects.first()
-            if first_garden:
-                SystemLog.objects.create(
-                    garden=first_garden,
-                    event="Pump stopped",
-                    source=request.data.get('source', 'Manual')
-                )
+            SystemLog.objects.create(
+                garden=garden,
+                event="Pump stopped",
+                source=request.data.get('source', 'Manual')
+            )
             
             return Response({
                 'success': True,
@@ -513,22 +640,49 @@ class SystemControlViewSet(MockAwareViewSet):
         return Response({'success': True})
     
     @extend_schema(
+        parameters=[
+            OpenApiParameter(name="garden_id", description="Filter by garden ID", required=True, type=int)
+        ],
         summary="Get system status",
-        description="Returns the overall system status including connection and next scheduled event",
+        description="Returns the overall system status for a specific garden including connection and next scheduled event",
         responses={200: {"example": {
             "isConnected": True,
             "nextSchedule": {"time": "8:00 AM", "target": "Valve 1"},
-            "lastChecked": "2023-08-10T12:00:00Z"
+            "lastChecked": "2023-08-10T12:00:00Z",
+            "garden_id": 1
         }}}
     )
     @action(detail=False)
     def status(self, request):
-        """Get the overall system status."""
-        # Check if any valve is active
-        active_valves = Valve.objects.filter(status='on').exists()
+        """Get the overall system status for a specific garden."""
+        garden_id = request.query_params.get('garden_id')
         
-        # Get next scheduled event
-        next_schedule = Schedule.objects.filter(isActive=True).first()
+        if not garden_id:
+            return Response(
+                {'error': 'garden_id parameter is required'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Check if user has access to this garden
+        if not request.user.is_superuser and not GardenAccess.objects.filter(user=request.user, garden_id=garden_id).exists():
+            return Response(
+                {'error': 'Access denied to this garden'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        try:
+            garden = Garden.objects.get(id=garden_id)
+        except Garden.DoesNotExist:
+            return Response(
+                {'error': 'Garden not found'},
+                status=status.HTTP_404_NOT_FOUND
+            )
+        
+        # Check if any valve is active in this garden
+        active_valves = Valve.objects.filter(garden=garden, status='on').exists()
+        
+        # Get next scheduled event for this garden
+        next_schedule = Schedule.objects.filter(garden=garden, isActive=True).first()
         next_schedule_data = {}
         
         if next_schedule:
@@ -548,7 +702,9 @@ class SystemControlViewSet(MockAwareViewSet):
         return Response({
             'isConnected': is_connected,
             'nextSchedule': next_schedule_data,
-            'lastChecked': timezone.now()
+            'lastChecked': timezone.now(),
+            'garden_id': garden.id,
+            'activeValves': active_valves
         })
     
     @extend_schema(
