@@ -67,6 +67,8 @@ services:
       - ./smart-garden-infra/mysql_image:/docker-entrypoint-initdb.d
     expose:
       - "8000"
+    ports:
+      - "8000:8000"
     env_file:
       - .env
     depends_on:
@@ -82,67 +84,67 @@ services:
     networks:
       - custom_network
 
-  celery:
-    build: ./django_image/
-    container_name: celery_worker
-    volumes:
-      - ./app:/src
-    env_file:
-      - .env
-    environment:
-      - C_FORCE_ROOT=true
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      broker:
-        condition: service_healthy
-    command: celery -A core worker -l INFO --autoscale=4,8 -Q high_priority,default,low_priority
-    networks:
-      - custom_network
+  # celery:
+  #   build: ./django_image/
+  #   container_name: celery_worker
+  #   volumes:
+  #     - ./app:/src
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - C_FORCE_ROOT=true
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     broker:
+  #       condition: service_healthy
+  #   command: celery -A core worker -l INFO --autoscale=4,8 -Q high_priority,default,low_priority
+  #   networks:
+  #     - custom_network
 
-  celery-beat:
-    build: ./django_image/
-    container_name: celery_beat
-    volumes:
-      - ./app:/src
-    env_file:
-      - .env
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      broker:
-        condition: service_healthy
-    command: celery -A core beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
-    networks:
-      - custom_network
+  # celery-beat:
+  #   build: ./django_image/
+  #   container_name: celery_beat
+  #   volumes:
+  #     - ./app:/src
+  #   env_file:
+  #     - .env
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     broker:
+  #       condition: service_healthy
+  #   command: celery -A core beat -l INFO --scheduler django_celery_beat.schedulers:DatabaseScheduler
+  #   networks:
+  #     - custom_network
 
-  flower:
-    build: ./django_image/
-    container_name: flower
-    volumes:
-      - ./app:/src
-    ports:
-      - "5555:5555"
-    env_file:
-      - .env
-    environment:
-      - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin123}
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      broker:
-        condition: service_healthy
-      celery:
-        condition: service_started
-    command: celery -A core flower --port=5555 --broker_api=http://guest:guest@broker:15672/api/
-    networks:
-      - custom_network
+  # flower:
+  #   build: ./django_image/
+  #   container_name: flower
+  #   volumes:
+  #     - ./app:/src
+  #   ports:
+  #     - "5555:5555"
+  #   env_file:
+  #     - .env
+  #   environment:
+  #     - FLOWER_BASIC_AUTH=${FLOWER_USER:-admin}:${FLOWER_PASSWORD:-admin123}
+  #   depends_on:
+  #     db:
+  #       condition: service_healthy
+  #     redis:
+  #       condition: service_healthy
+  #     broker:
+  #       condition: service_healthy
+  #     celery:
+  #       condition: service_started
+  #   command: celery -A core flower --port=5555 --broker_api=http://guest:guest@broker:15672/api/
+  #   networks:
+  #     - custom_network
 
 networks:
   custom_network:

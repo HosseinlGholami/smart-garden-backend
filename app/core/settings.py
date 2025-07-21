@@ -14,23 +14,14 @@ from pathlib import Path
 import os
 from datetime import timedelta
 
-# =====================================
-# =====related to load react app======
-# =====================================
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
-FRONTEND_DIR = os.path.join(BASE_DIR, 'front/build')
-STATICS_DIR = os.path.join(BASE_DIR, 'front/build/static')
-OTA_DIR = os.path.join(BASE_DIR, 'OTA/')
-STATICFILES_DIRS = [
-    FRONTEND_DIR, STATICS_DIR,OTA_DIR
-]
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/4.1/howto/static-files/
-
-STATIC_URL = 'trf/static/'
-# =====================================
+PREFIX = ''
+STATIC_URL = f'{PREFIX}/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.1/howto/deployment/checklist/
@@ -45,7 +36,6 @@ ALLOWED_HOSTS = os.environ.get('DJANGO_ALLOWED_HOSTS', 'localhost 127.0.0.1 [::1
 INSTALLED_APPS = [
     # for handling websoc
     'daphne',
-    'nd',
     'django.contrib.auth',
     "rest_framework",
     # for swagger
@@ -113,12 +103,6 @@ DJOSER = {
     'USERNAME_RESET_CONFIRM_URL': 'username/reset/confirm/{uid}/{token}',
     'ACTIVATION_URL': 'activate/{uid}/{token}',
     'SEND_ACTIVATION_EMAIL': True,
-    'SERIALIZERS': {
-        'user_create': 'nd.serializers.UserCreateSerializer',
-        'user': 'nd.serializers.UserSerializer',
-        'current_user': 'nd.serializers.UserSerializer',
-        'user_delete': 'djoser.serializers.UserDeleteSerializer',
-    },
 }
 
 # JWT settings
@@ -142,7 +126,7 @@ EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD', '')
 EMAIL_USE_TLS = os.environ.get('EMAIL_USE_TLS', 'True') == 'True'
 DEFAULT_FROM_EMAIL = os.environ.get('DEFAULT_FROM_EMAIL', 'noreply@smartgarden.com')
 
-AUTH_USER_MODEL = 'nd.CustomUser'
+# AUTH_USER_MODEL = 'nd.CustomUser'
 # ===================================================
 
 SPECTACULAR_SETTINGS = {
@@ -163,9 +147,9 @@ SPECTACULAR_SETTINGS = {
     "SECURITY": [{"jwtAuth": []}],
     "SERVE_AUTHENTICATION": [
         "rest_framework_simplejwt.authentication.JWTAuthentication",
-        "core.authentication.SSOAuthentication",
+        # "core.authentication.SSOAuthentication",
     ],
-    "SCHEMA_PATH_PREFIX": "/trf/",  # Only document your API paths
+    "SCHEMA_PATH_PREFIX": f"/{PREFIX}/",
 }
 
 # ====================================
@@ -194,7 +178,7 @@ ASGI_APPLICATION = "core.asgi.application"
 DATABASES = {
     'default': {
         'ENGINE': os.environ.get('DB_ENGINE', 'django.db.backends.mysql'),
-        'NAME': os.environ.get('DB_NAME', 'smart_garden'),
+        'NAME': os.environ.get('DB_NAME', 'smart_garden_db'),
         'USER': os.environ.get('DB_USER', 'root'),
         'PASSWORD': os.environ.get('DB_PASSWORD', 'root'),
         'HOST': os.environ.get('DB_HOST', 'db'),
@@ -323,9 +307,10 @@ CELERY_CACHE_BACKEND = 'django-cache'
 FLOWER_BASE_URL = os.getenv('FLOWER_BASE_URL', 'http://celery:6666/flower')
 
 # Supernova API settings
-SUPERNOVA_BASE_URL = os.getenv('SUPERNOVA_BASE_URL', 'https://fc.digikala.com')
-SUPERNOVA_API_KEY = os.getenv('SUPERNOVA_API_KEY')
-SUPERNOVA_AUTH_TOKEN = os.getenv('SUPERNOVA_AUTH_TOKEN')
+INFLUXDB_URL = os.getenv('INFLUXDB_URL', 'http://influxdb:8086')
+INFLUXDB_TOKEN = os.getenv('INFLUXDB_TOKEN', 'EZInhxTn0gHnq_gKD6lqcPPCH8aLOQG_5VCEiGhiz5O94UQ6HzkCkuM4xbqOBhkgdfr_eOLWh2Fh0nKvh6bSpQ==')
+INFLUXDB_ORG = os.getenv('INFLUXDB_ORG', 'smart_garden')
+INFLUXDB_BUCKET = os.getenv('INFLUXDB_BUCKET', 'smart_garden')
 
 # Local network settings
 LOCAL_IP = os.getenv('LOCAL_IP', 'localhost')

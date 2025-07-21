@@ -25,7 +25,7 @@ from rest_framework_simplejwt.views import (
     TokenVerifyView,
 )
 from drf_spectacular.views import SpectacularAPIView, SpectacularRedocView, SpectacularSwaggerView
-from nd.views import FileDownloadView
+# from nd.views import FileDownloadView
 
 def not_found(request):
     raise Http404
@@ -35,8 +35,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     
     # API endpoints
-    path('api/', include('nd.urls')),
-    path('api/download/<str:filename>/', FileDownloadView.as_view(), name='download_file'),
+    # path('api/', include('nd.urls')),
+    # path('api/download/<str:filename>/', FileDownloadView.as_view(), name='download_file'),
 
     # Authentication endpoints
     path('auth/', include('djoser.urls')),
@@ -50,9 +50,6 @@ urlpatterns = [
     path('api/docs/', SpectacularSwaggerView.as_view(url_name='schema'), name='swagger-ui'),
     path('api/schema/redoc/', SpectacularRedocView.as_view(url_name='schema'), name='redoc'),
 
-    # Frontend
-    re_path(r'^.*$', TemplateView.as_view(template_name='index.html')),
-] + static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
-
+]
 if settings.DEBUG:
     urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)

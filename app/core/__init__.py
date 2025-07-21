@@ -4,7 +4,7 @@ from __future__ import absolute_import, unicode_literals
 from .celery_client import app as celery_app
 
 #TODO:
-from nd.util import purge_rabbitmq_queue
+from .utils.celery import purge_rabbitmq_queue
 import os
 
 
